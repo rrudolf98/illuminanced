@@ -76,15 +76,16 @@ fn read_file_to_string(filename: &str) -> std::io::Result<String> {
 fn read_file_to_u32(filename: &str) -> Option<u32> {
     read_file_to_string(filename)
         .map_err(|e| {
-            error!("Cannot read file `{}`: {}", filename, e);
+            error!("Cannot read file {}: {}", filename, e);
             e
         })
         .ok()
         .and_then(|s| {
             s.trim_end()
-                .parse::<u32>()
-                .map_err(|e| format!("Cannot parse {} as integer: {} from `{}`", s, e, filename))
+                .parse::<f64>() 
+                .map_err(|e| format!("Cannot parse {} as float: {} from {}", s, e, filename))
                 .ok()
+                .map(|f| f.round() as u32)
         })
 }
 
