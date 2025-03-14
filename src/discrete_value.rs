@@ -23,7 +23,7 @@ impl DiscreteValue {
         if diff > 1.0 + self.barrier || diff < -self.barrier {
             self.last_level = level as u32;
             let new_value = (level.floor() * self.step_size) as u32 + self.min;
-            Some(new_value)
+            Some(std::cmp::min(new_value, self._max))
         } else {
             None
         }
