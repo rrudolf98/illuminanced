@@ -1,11 +1,11 @@
 [Unit]
 Description=Ambient light monitoring Service
 Wants=syslog.socket
-Documentation=https://github.com/mikhail-m1/illuminanced
+Documentation=https://github.com/rrudolf98/illuminanced
 
 [Service]
 Type=forking
-ExecStart=/usr/local/sbin/illuminanced
+ExecStart=/usr/sbin/illuminanced -c /etc/illuminanced/illuminanced.conf
 PIDFile=/run/illuminanced.pid
 Restart=on-failure
 
