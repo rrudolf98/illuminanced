@@ -3,6 +3,9 @@ name = "illuminanced"
 version = "0.1.1"
 authors = ["Mikhail Modin <mikhailm1@gmail.com>"]
 edition = "2021"
+description = "A user-space daemon that automatically adjusts screen brightness based on light sensor readings."
+repository = "https://github.com/rrudolf98/illuminanced"
+homepage = "https://github.com/mikhail-m1/illuminanced"
 
 [dependencies]
 daemonize = "0.5"
