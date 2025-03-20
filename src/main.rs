@@ -11,6 +11,8 @@ use config::Config;
 use daemonize::Daemonize;
 use getopts::Options;
 use kalman::Kalman;
+use smoother::Smoother;
+
 use simplelog::{
     ColorChoice, Config as LoggerConfig, LevelFilter, TermLogger, TerminalMode, WriteLogger,
 };
@@ -23,6 +25,7 @@ mod config;
 mod discrete_value;
 mod kalman;
 mod switch_monitor;
+mod smoother;
 
 #[derive(Debug)]
 struct LightConvertor {
@@ -118,6 +121,8 @@ fn main_loop(
         config.light_steps(),
         config.step_barrier(),
     );
+    let mut smoother = Smoother::new(config.smoother_alpha());
+
     debug!("k: s:{:?}", stepped_brightness);
     loop {
         match read_file_to_u32(illuminance_filename) {
@@ -130,19 +135,20 @@ fn main_loop(
                 }
                 let brightness = light_convertor.get_light(illuminance_to_process as u32);
                 debug!("{}, {}, {}", illuminance, illuminance_k, brightness);
-                if let Some(new) = stepped_brightness.update(brightness) {
-                    info!(
-                        "raw {}, kalman {}, new level {} new brightness {}",
-                        illuminance, illuminance_k, brightness, new
-                    );
-                    set_brightness(config, new);
-                }
+                let new = stepped_brightness.update(brightness);
+                info!(
+                    "raw {}, kalman {}, new level {} new brightness {}",
+                    illuminance, illuminance_k, brightness, new
+                );
+                let smoothed_brightness = smoother.update(new as f32);
+                set_brightness(config, smoothed_brightness as u32);
+                
             }
             _ => error!("Cannot read illuminance"),
         }
-        if try_process_switch(&mut switch_monitor, config, max_brightness) {
-            stepped_brightness.update(config.light_steps() as f32);
-        }
+        // if try_process_switch(&mut switch_monitor, config, max_brightness) {
+        //     stepped_brightness.update(config.light_steps() as f32);
+        // }
     }
 }
 

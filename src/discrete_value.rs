@@ -17,16 +17,21 @@ impl DiscreteValue {
             last_level: 0,
         }
     }
-    pub fn update(&mut self, level: f32) -> Option<u32> {
-        let diff = level - self.last_level as f32;
-        debug!("step diff {}", diff);
-        if diff > 1.0 + self.barrier || diff < -self.barrier {
-            self.last_level = level as u32;
-            let new_value = (level.floor() * self.step_size) as u32 + self.min;
-            Some(std::cmp::min(new_value, self._max))
-        } else {
-            None
-        }
+    pub fn update(&mut self, level: f32) -> u32{
+        // let diff = level - self.last_level as f32;
+        // debug!("step diff {}", diff);
+        // if diff > 1.0 + self.barrier || diff < -self.barrier {
+        //     self.last_level = level as u32;
+        //     let new_value = (level.floor() * self.step_size) as u32 + self.min;
+        //     std::cmp::min(new_value, self._max);
+        //     new_value
+        // } else {
+        //     let new_value = ((self.last_level as f32) * self.step_size) as u32 + self.min;
+        //     new_value
+        // }
+        let new_value = (level.floor() * self.step_size) as u32 + self.min;
+        std::cmp::min(new_value, self._max);
+        new_value
     }
 }
 
