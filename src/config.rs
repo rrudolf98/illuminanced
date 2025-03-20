@@ -77,6 +77,10 @@ impl Config {
         self.get_f32("kalman", "covariance").unwrap_or(10.0)
     }
 
+    pub fn kalman_enabled(&self) -> bool {
+        self.get_bool("kalman", "enabled").unwrap_or(true)
+    }
+
     pub fn max_backlight_filename(&self) -> &str {
         self.get_str("general", "max_backlight_file")
             .unwrap_or("/sys/class/backlight/intel_backlight/max_brightness")

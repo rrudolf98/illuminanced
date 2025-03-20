@@ -122,8 +122,13 @@ fn main_loop(
     loop {
         match read_file_to_u32(illuminance_filename) {
             Some(illuminance) => {
-                let illuminance_k = kalman.process(illuminance as f32);
-                let brightness = light_convertor.get_light(illuminance_k as u32);
+                let mut illuminance_to_process = illuminance as f32;
+                let mut illuminance_k = 0.0;
+                if config.kalman_enabled() {
+                    illuminance_k = kalman.process(illuminance as f32);
+                    illuminance_to_process = illuminance_k;
+                }
+                let brightness = light_convertor.get_light(illuminance_to_process as u32);
                 debug!("{}, {}, {}", illuminance, illuminance_k, brightness);
                 if let Some(new) = stepped_brightness.update(brightness) {
                     info!(
