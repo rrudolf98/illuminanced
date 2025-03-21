@@ -19,6 +19,9 @@ use simplelog::{
 use std::env;
 use std::fs::{File, OpenOptions};
 use std::io::prelude::*;
+use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::Duration;
 use syslog::Facility;
 
 mod config;
@@ -124,31 +127,43 @@ fn main_loop(
     let mut smoother = Smoother::new(config.smoother_alpha());
 
     debug!("k: s:{:?}", stepped_brightness);
-    loop {
-        match read_file_to_u32(illuminance_filename) {
-            Some(illuminance) => {
-                let mut illuminance_to_process = illuminance as f32;
-                let mut illuminance_k = 0.0;
-                if config.kalman_enabled() {
-                    illuminance_k = kalman.process(illuminance as f32);
-                    illuminance_to_process = illuminance_k;
+
+    let illuminance_filename_arc = Arc::new(illuminance_filename.to_string()); 
+    let illuminance_filename_clone = Arc::clone(&illuminance_filename_arc);
+    let illuminanace_value = Arc::new(Mutex::new(0u32));
+    let illuminanace_value_clone = Arc::clone(&illuminanace_value);
+
+    thread::spawn(move || {
+        loop {
+            match read_file_to_u32(&illuminance_filename_clone) {
+                Some(illuminance) => {
+                    let mut val = illuminanace_value_clone.lock().unwrap();
+                    *val = illuminance as u32;
+                    info!("illuminance value updated {}", val);
                 }
-                let brightness = light_convertor.get_light(illuminance_to_process as u32);
-                debug!("{}, {}, {}", illuminance, illuminance_k, brightness);
-                let new = stepped_brightness.update(brightness);
-                info!(
-                    "raw {}, kalman {}, new level {} new brightness {}",
-                    illuminance, illuminance_k, brightness, new
-                );
-                let smoothed_brightness = smoother.update(new as f32);
-                set_brightness(config, smoothed_brightness as u32);
-                
+                None => {}
             }
-            _ => error!("Cannot read illuminance"),
+            //thread::sleep(Duration::from_secs(1)); // Adjust polling interval
         }
-        // if try_process_switch(&mut switch_monitor, config, max_brightness) {
-        //     stepped_brightness.update(config.light_steps() as f32);
-        // }
+    });
+
+    loop {
+        let illuminance = *illuminanace_value.lock().unwrap() as u32;
+        let mut illuminance_to_process = illuminance as f32;
+        let mut illuminance_k = 0.0;
+        if config.kalman_enabled() {
+            illuminance_k = kalman.process(illuminance as f32);
+            illuminance_to_process = illuminance_k;
+        }
+        let brightness = light_convertor.get_light(illuminance_to_process as u32);
+        debug!("{}, {}, {}", illuminance, illuminance_k, brightness);
+        let new = stepped_brightness.update(brightness);
+        let smoothed_brightness = smoother.update(new as f32);
+        info!(
+            "raw {}, kalman {}, new level {} new brightness {}, smoothed brightness {}",
+            illuminance, illuminance_k, brightness, new, smoothed_brightness
+        );
+        set_brightness(config, smoothed_brightness as u32);
     }
 }
 
