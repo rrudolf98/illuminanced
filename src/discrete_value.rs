@@ -30,7 +30,7 @@ impl DiscreteValue {
         //     new_value
         // }
         let new_value = (level.floor() * self.step_size) as u32 + self.min;
-        std::cmp::min(new_value, self._max);
+        new_value = std::cmp::min(new_value, self._max);
         new_value
     }
 }

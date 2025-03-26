@@ -158,12 +158,13 @@ fn main_loop(
         let brightness = light_convertor.get_light(illuminance_to_process as u32);
         debug!("{}, {}, {}", illuminance, illuminance_k, brightness);
         let new = stepped_brightness.update(brightness);
-        let smoothed_brightness = smoother.update(new as f32);
-        info!(
+        let smoothed_brightness = smoother.update(new);
+        debug!(
             "raw {}, kalman {}, new level {} new brightness {}, smoothed brightness {}",
             illuminance, illuminance_k, brightness, new, smoothed_brightness
         );
-        set_brightness(config, smoothed_brightness as u32);
+        set_brightness(config, smoothed_brightness);
+        thread::sleep(Duration::from_millis(2));
     }
 }
 
