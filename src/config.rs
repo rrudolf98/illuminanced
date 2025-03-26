@@ -81,6 +81,10 @@ impl Config {
         self.get_bool("kalman", "enabled").unwrap_or(true)
     }
 
+    pub fn smoother_alpha(&self) -> f32 {
+        self.get_f32("smoother", "alpha").unwrap_or(0.0)
+    }
+
     pub fn max_backlight_filename(&self) -> &str {
         self.get_str("general", "max_backlight_file")
             .unwrap_or("/sys/class/backlight/intel_backlight/max_brightness")

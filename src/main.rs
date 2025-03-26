@@ -11,6 +11,7 @@ use config::Config;
 use daemonize::Daemonize;
 use getopts::Options;
 use kalman::Kalman;
+use smoother::Smoother;
 use simplelog::{
     ColorChoice, Config as LoggerConfig, LevelFilter, TermLogger, TerminalMode, WriteLogger,
 };
@@ -27,6 +28,7 @@ mod config;
 mod discrete_value;
 mod kalman;
 mod switch_monitor;
+mod smoother;
 
 #[derive(Debug)]
 struct LightConvertor {
@@ -122,12 +124,17 @@ fn main_loop(
         config.light_steps(),
         config.step_barrier(),
     );
+    let mut smoother = Smoother::new(
+        config.smoother_alpha(),
+    );
     debug!("k: s:{:?}", stepped_brightness);
     
     let illuminance_filename_arc = Arc::new(illuminance_filename.to_string()); 
     let illuminance_filename_clone = Arc::clone(&illuminance_filename_arc);
     let illuminanace_value = Arc::new(Mutex::new(0u32));
     let illuminanace_value_clone = Arc::clone(&illuminanace_value);
+    let first_reading_done = Arc::new(Mutex::new(false)); 
+    let first_reading_done_clone = Arc::clone(&first_reading_done);
 
     //reading from sensor loop
     thread::spawn(move || {
@@ -136,32 +143,49 @@ fn main_loop(
                 Some(illuminance) => {
                     let mut val = illuminanace_value_clone.lock().unwrap();
                     *val = illuminance as u32;
-                    info!("illuminance value updated {}", val);
+                    let mut val2 = first_reading_done_clone.lock().unwrap();
+                    *val2 = true;
+                    debug!("illuminance value updated {}", val);
                 }
                 None => {}
             }
         }
     });
     
+    let mut target_brightness = config.min_backlight();
     //data processing and setting brightness loop
     loop {
         let illuminance = *illuminanace_value.lock().unwrap() as u32;
-        let mut illuminance_to_process = illuminance as f32;
-        let mut illuminance_k = 0.0;
-        if config.kalman_enabled() {
-            illuminance_k = kalman.process(illuminance as f32);
-            illuminance_to_process = illuminance_k;
+        if *first_reading_done.lock().unwrap()  { //wait for first sensor reading
+            let mut illuminance_to_process = illuminance as f32;
+            let mut illuminance_k = 0.0;
+
+            //kalman filter
+            if config.kalman_enabled() {
+                illuminance_k = kalman.process(illuminance as f32);
+                illuminance_to_process = illuminance_k;
+            }
+
+            //linear interpolation
+            let brightness = light_convertor.get_light(illuminance_to_process as u32);
+            debug!("{}, {}, {}", illuminance, illuminance_k, brightness);
+
+            //convert to backlight brighntess scale
+            if let Some(new) = stepped_brightness.update(brightness) {
+                info!(
+                    "raw {}, kalman {}, new level {} new target brightness {}",
+                    illuminance, illuminance_k, brightness, target_brightness
+                );
+                target_brightness = new;
+            }
+
+            // smoothing output (avoid sharp, abrupt changes of backlight)
+            if let Some(current_brightness) = smoother.update(target_brightness){
+                debug!("smoothing: target {}, current {}", target_brightness, current_brightness);
+                set_brightness(config, current_brightness);
+            }
         }
-        let brightness = light_convertor.get_light(illuminance_to_process as u32);
-        debug!("{}, {}, {}", illuminance, illuminance_k, brightness);
-        if let Some(new) = stepped_brightness.update(brightness) {
-            info!(
-                "raw {}, kalman {}, new level {} new brightness {}",
-                illuminance, illuminance_k, brightness, new
-            );
-            set_brightness(config, new);
-        }
-            
+
         if try_process_switch(&mut switch_monitor, config, max_brightness) {
             stepped_brightness.update(config.light_steps() as f32);
         }
