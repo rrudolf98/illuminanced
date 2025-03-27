@@ -4,7 +4,7 @@ Wants=syslog.socket
 Documentation=https://github.com/rrudolf98/illuminanced
 
 [Service]
-Type=forking
+Type=idle
 ExecStart=/usr/sbin/illuminanced -c /etc/illuminanced/illuminanced.conf
 PIDFile=/run/illuminanced.pid
 Restart=on-failure
