@@ -117,6 +117,8 @@ fn main_loop(
         config.kalman_q(),
         config.kalman_r(),
         config.kalman_covariance(),
+        config.kalman_inertial_threshold(),
+        config.kalman_wait_counter_limit(),
     );
     let mut stepped_brightness = discrete_value::DiscreteValue::new(
         config.min_backlight(),

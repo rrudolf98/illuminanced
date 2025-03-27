@@ -4,22 +4,22 @@ pub struct Kalman {
     value: Option<f32>,
     previous_input: Option<f32>,
     covariance: f32,
-    threshold: f32,
+    inertial_threshold: f32,
     wait_counter: u32,
-    wait_limit: u32,
+    wait_counter_limit: u32,
 }
 
 impl Kalman {
-    pub fn new(q: f32, r: f32, covariance: f32) -> Kalman {
+    pub fn new(q: f32, r: f32, covariance: f32, inertial_threshold: f32, wait_counter_limit: u32) -> Kalman {
         Kalman {
             q,
             r,
             value: None,
             previous_input: None,
             covariance,
-            threshold: 10.0, //abs (current - previous) illuminance
+            inertial_threshold, //abs (current - previous) illuminance
+            wait_counter_limit,
             wait_counter: 0,
-            wait_limit: 150,
         }
     }
     pub fn process(&mut self, input: f32) -> f32 {
@@ -32,8 +32,8 @@ impl Kalman {
             Some(x0) => {
                 // filter response inertia - remove sudden and momentary changes
                 let delta = (input - self.previous_input.unwrap()).abs(); 
-                if delta > self.threshold {
-                    if self.wait_counter < self.wait_limit {
+                if delta > self.inertial_threshold {
+                    if self.wait_counter < self.wait_counter_limit {
                         self.wait_counter += 1;
                         return x0;
                     } else {

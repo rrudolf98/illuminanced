@@ -77,6 +77,14 @@ impl Config {
         self.get_f32("kalman", "covariance").unwrap_or(10.0)
     }
 
+    pub fn kalman_inertial_threshold(&self) -> f32 {
+        self.get_f32("kalman", "inertial_threshold").unwrap_or(10.0)
+    }
+
+    pub fn kalman_wait_counter_limit(&self) -> u32 {
+        self.get_u32("kalman", "wait_counter_limit").unwrap_or(0)
+    }
+
     pub fn kalman_enabled(&self) -> bool {
         self.get_bool("kalman", "enabled").unwrap_or(true)
     }
